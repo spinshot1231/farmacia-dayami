@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Farmacia Dayami · Mensaje por WhatsApp</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .card{box-shadow:0 10px 28px rgba(0,0,0,.08)}
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  <main class="max-w-xl mx-auto p-4 pb-16">
+    <h1 class="text-2xl font-bold mb-4 text-center">Farmacia Dayami</h1>
+
+    <section class="card bg-white rounded-2xl border border-slate-200 p-4 space-y-5">
+      <div>
+        <label class="block text-sm font-semibold">Números (uno por línea)</label>
+        <textarea id="nums" rows="5" class="w-full border rounded-xl p-3 text-base" inputmode="numeric" placeholder="5511223344\n5533445566\n5218112345678"></textarea>
+        <p class="text-xs text-slate-500 mt-1">Si tiene 10 dígitos se agregará <strong>+52</strong> automáticamente.</p>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold">Medicamento que llegó</label>
+        <input id="med" type="text" class="w-full border rounded-xl p-3" placeholder="Ej. Amoxicilina 500 mg">
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold">Vista previa del mensaje</label>
+        <textarea id="msg" rows="4" class="w-full border rounded-xl p-3 text-base"></textarea>
+        <p class="text-xs text-slate-500 mt-1">Puedes editar el texto antes de enviar.</p>
+      </div>
+
+      <div class="grid gap-3">
+        <button id="prepare" class="w-full text-base px-5 py-3 rounded-xl font-semibold bg-emerald-500 text-white">1) Preparar lista</button>
+        <button id="nextChat" class="w-full text-base px-5 py-3 rounded-xl font-semibold bg-green-600 text-white disabled:opacity-50" disabled>2) Abrir siguiente chat</button>
+      </div>
+
+      <div class="text-sm text-slate-600 flex items-center justify-between mt-1">
+        <span id="status">0 de 0 preparados</span>
+        <button id="reset" class="text-emerald-700 font-semibold">Reiniciar</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const numsEl = document.getElementById('nums');
+    const medEl = document.getElementById('med');
+    const msgEl = document.getElementById('msg');
+    const prepareBtn = document.getElementById('prepare');
+    const nextBtn = document.getElementById('nextChat');
+    const resetBtn = document.getElementById('reset');
+    const statusEl = document.getElementById('status');
+
+    let queue = [];
+    let index = 0;
+
+    function cleanNumber(s){
+      const d = (s || '').replace(/[^0-9]/g, '');
+      if(!d) return '';
+      if(d.length === 10) return '52' + d; // MX por defecto
+      return d;
+    }
+
+    function buildText(){
+      const med = medEl.value.trim();
+      const base = 'Hola, buen día. Le hablamos de Farmacia Dayami para avisarle que su encargo';
+      const extra = med ? ' "' + med + '"' : '';
+      const cierre = ' ya lo tenemos disponible para que pase a recogerlo.';
+      msgEl.value = base + extra + cierre;
+    }
+
+    function buildLink(numWithCc, text){
+      const u = new URL('https://wa.me/' + numWithCc);
+      if(text) u.searchParams.set('text', text.trim());
+      return u.toString();
+    }
+
+    function updateStatus(){
+      statusEl.textContent = Math.min(index, queue.length) + ' de ' + queue.length + ' preparados';
+      const enabled = queue.length > 0 && index < queue.length;
+      nextBtn.disabled = !enabled;
+    }
+
+    function prepareList(){
+      const lines = numsEl.value.split('\n').map(v=>v.trim()).filter(Boolean);
+      queue = lines.map(cleanNumber).filter(Boolean);
+      index = 0;
+      if(!queue.length){ alert('Agrega al menos un número válido.'); }
+      updateStatus();
+      buildText();
+    }
+
+    function openNext(){
+      if(index >= queue.length) { updateStatus(); return; }
+      const n = queue[index++];
+      const text = msgEl.value.trim();
+      const link = buildLink(n, text);
+      try { navigator.clipboard.writeText(text); } catch(e) {}
+      window.location.href = link;
+      updateStatus();
+    }
+
+    medEl.addEventListener('input', buildText);
+    prepareBtn.addEventListener('click', prepareList);
+    nextBtn.addEventListener('click', openNext);
+    resetBtn.addEventListener('click', ()=>{ queue = []; index = 0; updateStatus(); });
+
+    buildText();
+    updateStatus();
+  </script>
+</body>
+</html>
